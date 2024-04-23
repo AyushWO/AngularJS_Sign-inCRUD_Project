@@ -1,0 +1,32 @@
+<!-- <button><a href="#!/sign-in">Log-out</a></button> -->
+<div ng-controller="ContactListController">
+  <h2>Contact List</h2>
+<table border="2px">
+  <thead>
+    <tr>
+      <td>Name</td>
+      <td>Email</td>
+      <td>Phone</td>
+      <td style="width: 50px;">Image</td> 
+      <td>Action</td>
+    </tr>
+  </thead>
+  <tbody>
+    <tr ng-repeat="contact in contacts">
+      <td>{{ contact.name }}</td>
+      <td>{{ contact.email }}</td>
+      <td>{{ contact.phone }}</td>
+      <td style="width: 50px;"><img ng-src="{{ contact.image }}" style="max-width: 100%; height: auto;"></td>
+</td>
+      <td>
+        <button ng-click="editContact(contact)">Edit</button>
+        <button ng-click="deleteContact(contact)">Delete</button>
+      </td>
+    </tr>
+  </tbody>
+</table>
+<a href="#!/add-edit-contact">Add New Contact</a>
+<hr />
+<hr />
+  <button ng-click="logOut()">Log Out</button>
+</div>
