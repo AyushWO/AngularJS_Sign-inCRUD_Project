@@ -2,12 +2,12 @@
 <form ng-submit="signIn()" autocomplete="off">
   <div>
     <label>Email:</label>
-    <input type="email" ng-model="signInData.email" required />
+    <input type="email" placeholder="ex: abc@xyz.com" ng-model="signInData.email" />
   </div>
   <br />
   <div>
     <label>Password:</label>
-    <input type="password" ng-model="signInData.password" required />
+    <input type="password" placeholder="******" ng-model="signInData.password" />
   </div>
   <br />
   <button type="submit" (click)='form.reset();event.preventDefault();'>Sign In</button> &nbsp; <button type="reset">Clear</button>

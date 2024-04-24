@@ -33,8 +33,15 @@ app.config(function ($routeProvider) {
     .otherwise({ redirectTo: "/sign-in" });
 });
 
-app.run(function ($rootScope, $location, AuthService) {
+app.run(function ($rootScope, $location, AuthService, UserService) {
   AuthService.isLoggedIn();
+
+  if (AuthService.isLoggedIn()) {
+    let loggedInUserEmail = localStorage.getItem("loggedInUserEmail");
+    if (loggedInUserEmail) {
+      UserService.setCurrentUser(loggedInUserEmail);
+    }
+  }
 
   $rootScope.$on("$routeChangeStart", function (next) {
     if (
@@ -50,6 +57,10 @@ app.run(function ($rootScope, $location, AuthService) {
       AuthService.isLoggedIn()
     ) {
       $location.path("/contact-list");
+    }
+
+    if (AuthService.isLoggedIn()) {
+      UserService.setCurrentUserContacts();
     }
   });
 });
@@ -84,6 +95,11 @@ app.controller("SignUpController", function ($scope, $location, UserService) {
   $scope.passwordsMatchError = false;
 
   $scope.signUp = function () {
+    if (!$scope.signUpData.email || !$scope.signUpData.password) {
+      $scope.error = "Email and password are required.";
+      return;
+    }
+
     if ($scope.signUpData.password !== $scope.signUpData.confirmPassword) {
       $scope.passwordsMatchError = true;
       return;
@@ -175,8 +191,8 @@ app.controller(
 
 app.service("UserService", function (AuthService) {
   let users = JSON.parse(localStorage.getItem("users")) || [];
-  let currentUser = null;
-  let currentContact = null;
+  let currentUser = JSON.parse(localStorage.getItem("currentUser")) || null;
+  let currentContact = JSON.parse(localStorage.getItem("currentContact")) || null;
 
   function saveUsers() {
     localStorage.setItem("users", JSON.stringify(users));
@@ -192,6 +208,7 @@ app.service("UserService", function (AuthService) {
       if (user && user.password === password) {
         currentUser = user;
         AuthService.logIn();
+        localStorage.setItem("currentUser", JSON.stringify(currentUser));
         return true;
       }
       return false;
@@ -205,9 +222,11 @@ app.service("UserService", function (AuthService) {
       saveUsers();
       return true;
     },
+
     getCurrentUserContacts: function () {
       return currentUser ? currentUser.contacts : [];
     },
+
     saveContact: function (contact, editing) {
       if (!currentUser) return;
 
@@ -224,18 +243,7 @@ app.service("UserService", function (AuthService) {
       }
       saveUsers();
     },
-    getImageData: function (imageSrc) {
-      let image = new Image();
-      image.src = imageSrc;
-      let canvas = document.createElement("canvas");
-      let ctx = canvas.getContext("2d");
-      image.onload = function () {
-        canvas.width = image.width;
-        canvas.height = image.height;
-        ctx.drawImage(image, 0, 0);
-      };
-      return canvas.toDataURL("image/png");
-    },
+
     deleteContact: function (contact) {
       if (!currentUser) return;
 
@@ -245,23 +253,42 @@ app.service("UserService", function (AuthService) {
         saveUsers();
       }
     },
+
     setCurrentContact: function (contact) {
       currentContact = contact;
+      localStorage.setItem("currentContact", JSON.stringify(currentContact));
     },
+
     getCurrentContact: function () {
       return currentContact;
     },
+
     clearCurrentContact: function () {
       currentContact = null;
+      localStorage.removeItem("currentContact");
+    },
+
+    setCurrentUser: function (email) {
+      currentUser = getUserByEmail(email);
+      localStorage.setItem("currentUser", JSON.stringify(currentUser));
+    },
+
+    setCurrentUserContacts: function () {
+      if (currentUser) {
+        currentUser = getUserByEmail(currentUser.email);
+        localStorage.setItem("currentUser", JSON.stringify(currentUser));
+      }
     },
   };
 });
+
 
 app.service("AuthService", function ($location) {
   let loggedIn = localStorage.getItem("loggedIn") === "true";
 
   return {
     isLoggedIn: function () {
+      loggedIn = localStorage.getItem("loggedIn") === "true";
       return loggedIn;
     },
     logIn: function () {
@@ -279,4 +306,3 @@ app.service("AuthService", function ($location) {
     },
   };
 });
-
