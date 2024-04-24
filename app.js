@@ -4,11 +4,11 @@ app.config(function ($routeProvider) {
   $routeProvider
     .when("/sign-in", {
       templateUrl: "sign-in.html",
-      controller: "SignInController"
+      controller: "SignInController",
     })
     .when("/sign-up", {
       templateUrl: "sign-up.html",
-      controller: "SignUpController"
+      controller: "SignUpController",
     })
     .when("/contact-list", {
       templateUrl: "contact-list.html",
@@ -16,9 +16,9 @@ app.config(function ($routeProvider) {
       resolve: {
         loginCheck: function (AuthService) {
           AuthService.requireLogin();
-        }
+        },
       },
-      authenticate: true
+      authenticate: true,
     })
     .when("/add-edit-contact", {
       templateUrl: "add-edit-contact.html",
@@ -26,44 +26,57 @@ app.config(function ($routeProvider) {
       resolve: {
         loginCheck: function (AuthService) {
           AuthService.requireLogin();
-        }
+        },
       },
-      authenticate: true
+      authenticate: true,
     })
     .otherwise({ redirectTo: "/sign-in" });
 });
 
 app.run(function ($rootScope, $location, AuthService) {
-  $rootScope.$on("$routeChangeStart", function (event, next, current) {
-    if (next.$$route && next.$$route.authenticate && !AuthService.isLoggedIn()) {
+  AuthService.isLoggedIn();
+
+  $rootScope.$on("$routeChangeStart", function (next) {
+    if (
+      next.$$route &&
+      next.$$route.authenticate &&
+      !AuthService.isLoggedIn()
+    ) {
       $location.path("/sign-in");
     }
-    if (next.$$route && next.$$route.originalPath === "/sign-in" && AuthService.isLoggedIn()) {
+    if (
+      next.$$route &&
+      next.$$route.originalPath === "/sign-in" &&
+      AuthService.isLoggedIn()
+    ) {
       $location.path("/contact-list");
     }
   });
 });
 
-app.controller("SignInController", function ($scope, $location, UserService, AuthService) {
-  $scope.signInData = {};
-  $scope.error = "";
+app.controller(
+  "SignInController",
+  function ($scope, $location, UserService, AuthService) {
+    $scope.signInData = {};
+    $scope.error = "";
 
-  $scope.signIn = function () {
-    let foundUser = UserService.signIn(
-      $scope.signInData.email,
-      $scope.signInData.password
-    );
-    if (foundUser) {
-      $location.path("/contact-list");
-    } else {
-      $scope.error = "Invalid email or password. Please try again.";
-    }
-  };
+    $scope.signIn = function () {
+      let foundUser = UserService.signIn(
+        $scope.signInData.email,
+        $scope.signInData.password
+      );
+      if (foundUser) {
+        $location.path("/contact-list");
+      } else {
+        $scope.error = "Invalid email or password. Please try again.";
+      }
+    };
 
-  $scope.goToSignUp = function () {
-    $location.path("/sign-up");
-  };
-});
+    $scope.goToSignUp = function () {
+      $location.path("/sign-up");
+    };
+  }
+);
 
 app.controller("SignUpController", function ($scope, $location, UserService) {
   $scope.signUpData = {};
@@ -92,61 +105,73 @@ app.controller("SignUpController", function ($scope, $location, UserService) {
   };
 });
 
-app.controller("ContactListController", function ($scope, $location, UserService, AuthService) {
-  $scope.contacts = UserService.getCurrentUserContacts();
+app.controller(
+  "ContactListController",
+  function ($scope, $location, UserService, AuthService, $http) {
+    $scope.contacts = UserService.getCurrentUserContacts();
 
-  $scope.logOut = function () {
-    AuthService.logOut();
-    $location.path("/sign-in");
-  };
-
-  $scope.editContact = function (contact) {
-    UserService.setCurrentContact(contact);
-    $location.path("/add-edit-contact");
-  };
-
-  $scope.deleteContact = function (contact) {
-    UserService.deleteContact(contact);
-  };
-});
-
-app.controller("AddEditContactController", function ($scope, $location, UserService, AuthService) {
-  $scope.contact = {};
-  $scope.editing = false;
-
-  let currentContact = UserService.getCurrentContact();
-  if (currentContact) {
-    $scope.contact = angular.copy(currentContact);
-    $scope.editing = true;
-    UserService.clearCurrentContact();
-  }
-
-  $scope.saveContact = function () {
-    UserService.saveContact($scope.contact, $scope.editing);
-    $location.path("/contact-list");
-  };
-
-  $scope.editContact = function (contact) {
-    $scope.contact = angular.copy(contact);
-    $scope.editing = true;
-    $location.path("/add-edit-contact").search({ id: contact.id });
-  };
-
-  $scope.logOut = function () {
-    AuthService.logOut();
-    $location.path("/sign-in");
-  };
-
-  $scope.setImage = function (element) {
-    let reader = new FileReader();
-    reader.onload = function (e) {
-      $scope.$apply(function () {
-        $scope.contact.image = e.target.result;
-      });
+    $scope.logOut = function () {
+      AuthService.logOut();
+      $location.path("/sign-in");
     };
-    reader.readAsDataURL(element.files[0]);
-  };
-});
+
+    $scope.editContact = function (contact) {
+      UserService.setCurrentContact(contact);
+      $location.path("/add-edit-contact");
+    };
+
+    $scope.deleteContact = function (contact) {
+      UserService.deleteContact(contact);
+    };
+
+    $scope.exportData = function () {
+      alasql('SELECT * INTO XLSX("contact.xlsx",{headers:true}) FROM ?', [
+        UserService.getCurrentUserContacts(),
+      ]);
+    };
+  }
+);
+
+app.controller(
+  "AddEditContactController",
+  function ($scope, $location, UserService, AuthService) {
+    $scope.contact = {};
+    $scope.editing = false;
+
+    let currentContact = UserService.getCurrentContact();
+    if (currentContact) {
+      $scope.contact = angular.copy(currentContact);
+      $scope.editing = true;
+      UserService.clearCurrentContact();
+    }
+
+    $scope.saveContact = function () {
+      UserService.saveContact($scope.contact, $scope.editing);
+      $location.path("/contact-list");
+    };
+
+    $scope.editContact = function (contact) {
+      $scope.contact = angular.copy(contact);
+      $scope.editing = true;
+      $location.path("/add-edit-contact").search({ id: contact.id });
+    };
+
+    $scope.logOut = function () {
+      AuthService.logOut();
+      $location.path("/sign-in");
+    };
+
+    $scope.setImage = function (element) {
+      let reader = new FileReader();
+      reader.onload = function (e) {
+        $scope.$apply(function () {
+          $scope.contact.image = e.target.result;
+        });
+      };
+      reader.readAsDataURL(element.files[0]);
+    };
+  }
+);
 
 app.service("UserService", function (AuthService) {
   let users = JSON.parse(localStorage.getItem("users")) || [];
@@ -233,7 +258,7 @@ app.service("UserService", function (AuthService) {
 });
 
 app.service("AuthService", function ($location) {
-  let loggedIn = false;
+  let loggedIn = localStorage.getItem("loggedIn") === "true";
 
   return {
     isLoggedIn: function () {
@@ -241,14 +266,17 @@ app.service("AuthService", function ($location) {
     },
     logIn: function () {
       loggedIn = true;
+      localStorage.setItem("loggedIn", "true");
     },
     logOut: function () {
       loggedIn = false;
+      localStorage.setItem("loggedIn", "false");
     },
     requireLogin: function () {
       if (!loggedIn) {
         $location.path("/sign-in");
       }
-    }
+    },
   };
 });
+
