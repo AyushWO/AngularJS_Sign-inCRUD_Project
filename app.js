@@ -392,3 +392,4 @@ app.directive("contactCard", function () {
     },
   };
 });
+//yaha tak
