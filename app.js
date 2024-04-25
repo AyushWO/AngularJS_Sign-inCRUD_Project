@@ -1,4 +1,4 @@
-let app = angular.module("contactApp", ["ngRoute"]);
+let app = angular.module("contactApp", ["ngRoute", "ui.bootstrap"]);
 
 app.config(function ($routeProvider) {
   $routeProvider
@@ -121,9 +121,57 @@ app.controller("SignUpController", function ($scope, $location, UserService) {
   };
 });
 
+// app.controller(
+//   "ContactListController",
+//   function ($scope, $location, UserService, AuthService, $http) {
+//     $scope.contacts = UserService.getCurrentUserContacts();
+
+//     $scope.logOut = function () {
+//       AuthService.logOut();
+//       $location.path("/sign-in");
+//     };
+
+//     $scope.editContact = function (contact) {
+//       UserService.setCurrentContact(contact);
+//       $location.path("/add-edit-contact");
+//     };
+
+//     $scope.deleteContact = function (contact) {
+//       UserService.deleteContact(contact);
+//     };
+
+//     $scope.exportData = function () {
+//       alasql('SELECT * INTO XLSX("contact.xlsx",{headers:true}) FROM ?', [
+//         UserService.getCurrentUserContacts(),
+//       ]);
+//     };
+//   }
+// );
+
+app.controller(
+  "ContactModalController",
+  function ($scope, $uibModalInstance, UserService, contact) {
+    $scope.contact = angular.copy(contact);
+
+    $scope.saveContact = function () {
+      UserService.saveContact($scope.contact, true);
+      $uibModalInstance.close("saved");
+    };
+
+    $scope.deleteContact = function () {
+      UserService.deleteContact($scope.contact);
+      $uibModalInstance.close("deleted");
+    };
+
+    $scope.cancel = function () {
+      $uibModalInstance.dismiss("cancel");
+    };
+  }
+);
+
 app.controller(
   "ContactListController",
-  function ($scope, $location, UserService, AuthService, $http) {
+  function ($scope, $location, UserService, AuthService, $uibModal) {
     $scope.contacts = UserService.getCurrentUserContacts();
 
     $scope.logOut = function () {
@@ -144,6 +192,27 @@ app.controller(
       alasql('SELECT * INTO XLSX("contact.xlsx",{headers:true}) FROM ?', [
         UserService.getCurrentUserContacts(),
       ]);
+    };
+
+    $scope.openModal = function (contact) {
+      var modalInstance = $uibModal.open({
+        templateUrl: "contact-modal.html",
+        controller: "ContactModalController",
+        resolve: {
+          contact: function () {
+            return contact;
+          },
+        },
+      });
+
+      modalInstance.result.then(
+        function (result) {
+          // todo: handle modal result
+        },
+        function () {
+          // todo: modal dismissed
+        }
+      );
     };
   }
 );
@@ -192,7 +261,8 @@ app.controller(
 app.service("UserService", function (AuthService) {
   let users = JSON.parse(localStorage.getItem("users")) || [];
   let currentUser = JSON.parse(localStorage.getItem("currentUser")) || null;
-  let currentContact = JSON.parse(localStorage.getItem("currentContact")) || null;
+  let currentContact =
+    JSON.parse(localStorage.getItem("currentContact")) || null;
 
   function saveUsers() {
     localStorage.setItem("users", JSON.stringify(users));
@@ -282,7 +352,6 @@ app.service("UserService", function (AuthService) {
   };
 });
 
-
 app.service("AuthService", function ($location) {
   let loggedIn = localStorage.getItem("loggedIn") === "true";
 
@@ -307,27 +376,19 @@ app.service("AuthService", function ($location) {
   };
 });
 
-app.directive('contactCard', function() {
+app.directive("contactCard", function () {
   return {
-      restrict: 'E',
-      templateUrl: 'contact-list.html',
-      scope: {
-          contact: '=',
-          onEdit: '&', 
-          onDelete: '&'
-      },
-      controller: function($scope, $uibModal) {
-          $scope.openModal = function() {
-              var modalInstance = $uibModal.open({
-                  templateUrl: 'contact-details-modal.html',
-                  controller: 'ContactDetailsModalController',
-                  resolve: {
-                      contact: function() {
-                          return $scope.contact;
-                      }
-                  }
-              });
-          };
-      }
+    restrict: "EA",
+    templateUrl: "contact-card.html",
+    scope: {
+      contact: "=",
+    },
+    link: function (scope, element) {
+      element.on("dblclick", function () {
+        scope.$apply(function () {
+          scope.openModal(scope.contact);
+        });
+      });
+    },
   };
 });
