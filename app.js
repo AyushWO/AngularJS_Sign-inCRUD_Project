@@ -306,3 +306,28 @@ app.service("AuthService", function ($location) {
     },
   };
 });
+
+app.directive('contactCard', function() {
+  return {
+      restrict: 'E',
+      templateUrl: 'contact-list.html',
+      scope: {
+          contact: '=',
+          onEdit: '&', 
+          onDelete: '&'
+      },
+      controller: function($scope, $uibModal) {
+          $scope.openModal = function() {
+              var modalInstance = $uibModal.open({
+                  templateUrl: 'contact-details-modal.html',
+                  controller: 'ContactDetailsModalController',
+                  resolve: {
+                      contact: function() {
+                          return $scope.contact;
+                      }
+                  }
+              });
+          };
+      }
+  };
+});
